@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # 导入独立的数据模块
 from data import get_nasdaq_chart_data, get_etf_uptrend_data, get_themes
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder='.')
 CORS(app)
 
 
@@ -22,7 +22,7 @@ CORS(app)
 @app.route('/')
 def index():
     """首页 - 导航页面"""
-    return send_from_directory('static', 'index.html')
+    return send_from_directory('.', 'index.html')
 
 
 @app.route('/nasdaq')
