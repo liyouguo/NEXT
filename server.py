@@ -20,21 +20,24 @@ CORS(app)
 
 # ============ 页面路由 ============
 @app.route('/')
+@app.route('/index.html')
 def index():
     """首页 - 导航页面"""
     return send_from_directory('.', 'index.html')
 
 
 @app.route('/nasdaq')
+# @app.route('/nasdaq.html')
 def nasdaq_page():
     """NASDAQ 指数页面"""
-    return send_from_directory('.', 'nasdaq.html')
+    return send_from_directory('static', 'nasdaq.html')
 
 
 @app.route('/etf')
+# @app.route('/etf.html')
 def etf_page():
     """ETF 上升趋势页面"""
-    return send_from_directory('.', 'etf.html')
+    return send_from_directory('static', 'etf.html')
 
 
 # ============ NASDAQ API ============

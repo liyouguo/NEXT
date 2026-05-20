@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>纳斯达克指数 - 美股性价比分析系统</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -48,7 +48,7 @@
         .header h1 {
             font-size: 2.5rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -97,6 +97,58 @@
             color: #94a3b8;
         }
 
+        .chart-wrapper {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.3);
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-value.positive {
+            color: #10b981;
+        }
+
+        .stat-value.negative {
+            color: #ef4444;
+        }
+
         .controls {
             display: flex;
             gap: 1rem;
@@ -113,67 +165,34 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
         }
 
         .btn:hover {
-            background: rgba(16, 185, 129, 0.3);
+            background: rgba(59, 130, 246, 0.3);
             transform: translateY(-2px);
         }
 
-        .btn:disabled {
+        .btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn.refresh {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .btn.refresh:hover {
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .btn.refresh:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            border: 1px solid rgba(148, 163, 184, 0.1);
-        }
-
-        .stat-label {
-            color: #94a3b8;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #3b82f6;
-        }
-
-        .stat-value.positive {
-            color: #10b981;
-        }
-
-        .stat-value.negative {
-            color: #ef4444;
-        }
-
-        .chart-container {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border-radius: 1rem;
-            padding: 2rem;
-            border: 1px solid rgba(148, 163, 184, 0.1);
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 500px;
         }
 
         @media (max-width: 768px) {
@@ -186,7 +205,11 @@
             }
 
             .chart-wrapper {
-                height: 350px;
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -198,8 +221,8 @@
         </a>
 
         <div class="header">
-            <h1>📈 纳斯达克指数</h1>
-            <p>实时追踪纳斯达克综合指数走势</p>
+            <h1>📈 纳斯达克指数 (IXIC)</h1>
+            <p>收盘价与信号评分趋势分析</p>
         </div>
 
         <div class="status-bar">
@@ -208,23 +231,22 @@
             <span class="status-text" id="updateTime"></span>
         </div>
 
-        <div class="controls">
-            <button class="btn" id="chartBtn">📊 信号评分</button>
-            <button class="btn" id="refreshBtn">🔄 刷新数据</button>
-        </div>
-
         <div class="stats-grid" id="statsGrid"></div>
 
-        <div class="chart-container" id="chartContainer" style="display: none;">
-            <div class="chart-wrapper">
-                <canvas id="mainChart"></canvas>
-            </div>
+        <div class="controls">
+            <button class="btn" id="toggleChartBtn">📊 信号评分</button>
+            <button class="btn refresh" id="refreshBtn">🔄 刷新数据</button>
+        </div>
+
+        <div class="chart-wrapper" id="chartWrapper" style="display: none;">
+            <canvas id="mainChart"></canvas>
         </div>
     </div>
 
     <script>
-        let chart = null;
-        let chartVisible = true;
+        let chart;
+        let data = [];
+        let chartVisible = false;
 
         function updateStatus(isLoading, isError = false, message = '') {
             const dot = document.getElementById('statusDot');
@@ -248,21 +270,6 @@
                 `更新时间: ${now.toLocaleString('zh-CN')}`;
         }
 
-        function toggleChart() {
-            const container = document.getElementById('chartContainer');
-            const btn = document.getElementById('chartBtn');
-            
-            chartVisible = !chartVisible;
-            
-            if (chartVisible) {
-                container.style.display = 'block';
-                btn.textContent = '📊 隐藏图表';
-            } else {
-                container.style.display = 'none';
-                btn.textContent = '📊 信号评分';
-            }
-        }
-
         async function fetchData() {
             updateStatus(true);
             try {
@@ -270,10 +277,13 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    data = result.data;
                     updateStatus(false);
                     updateUpdateTime();
-                    renderStats(result.data);
-                    renderChart(result.data);
+                    renderStats();
+                    if (chartVisible) {
+                        createChart();
+                    }
                 } else {
                     updateStatus(false, true, '数据获取失败');
                 }
@@ -306,140 +316,205 @@
             }
         }
 
-        function renderStats(data) {
-            if (!data || data.length === 0) return;
+        function calculateStats() {
+            if (!data.length) return null;
             
-            const latest = data[data.length - 1];
-            const first = data[0];
-            const change = latest.CLOSE - first.CLOSE;
-            const changePercent = (change / first.CLOSE * 100).toFixed(2);
-            const maxClose = Math.max(...data.map(d => parseFloat(d.CLOSE)));
-            const minClose = Math.min(...data.map(d => parseFloat(d.CLOSE)));
+            const prices = data.map(d => d.CLOSE);
+            const firstPrice = prices[0];
+            const lastPrice = prices[prices.length - 1];
+            const maxPrice = Math.max(...prices);
+            const minPrice = Math.min(...prices);
+            const priceChange = lastPrice - firstPrice;
+            const percentChange = ((priceChange / firstPrice) * 100).toFixed(2);
+
+            return {
+                current: lastPrice.toFixed(2),
+                change: priceChange.toFixed(2),
+                percentChange: percentChange,
+                max: maxPrice.toFixed(2),
+                min: minPrice.toFixed(2)
+            };
+        }
+
+        function renderStats() {
+            const stats = calculateStats();
+            const statsGrid = document.getElementById('statsGrid');
             
-            const container = document.getElementById('statsGrid');
-            container.innerHTML = `
+            if (!stats) {
+                statsGrid.innerHTML = '<div class="stat-card"><div class="stat-label">暂无数据</div></div>';
+                return;
+            }
+            
+            const isPositive = parseFloat(stats.change) >= 0;
+            
+            statsGrid.innerHTML = `
                 <div class="stat-card">
-                    <div class="stat-label">当前收盘</div>
-                    <div class="stat-value">${parseFloat(latest.CLOSE).toLocaleString('zh-CN', {maximumFractionDigits: 2})}</div>
+                    <div class="stat-label">当前收盘价</div>
+                    <div class="stat-value">${stats.current}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">期间涨跌</div>
-                    <div class="stat-value ${changePercent >= 0 ? 'positive' : 'negative'}">
-                        ${changePercent >= 0 ? '+' : ''}${changePercent}%
+                    <div class="stat-value ${isPositive ? 'positive' : 'negative'}">
+                        ${isPositive ? '+' : ''}${stats.change} (${isPositive ? '+' : ''}${stats.percentChange}%)
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">最高收盘</div>
-                    <div class="stat-value">${maxClose.toLocaleString('zh-CN', {maximumFractionDigits: 2})}</div>
+                    <div class="stat-value positive">${stats.max}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">最低收盘</div>
-                    <div class="stat-value">${minClose.toLocaleString('zh-CN', {maximumFractionDigits: 2})}</div>
+                    <div class="stat-value negative">${stats.min}</div>
                 </div>
             `;
         }
 
-        function renderChart(data) {
-            if (!data || data.length === 0) return;
-            
+        function createChart() {
             const ctx = document.getElementById('mainChart').getContext('2d');
             
             if (chart) {
                 chart.destroy();
             }
-            
+
+            if (!data.length) return;
+
             const labels = data.map(d => d.PDATE);
-            const closeData = data.map(d => parseFloat(d.CLOSE));
-            const signalData = data.map(d => parseFloat(d.SIGNALSCORE));
-            
+            const prices = data.map(d => d.CLOSE);
+            const signals = data.map(d => d.SIGNALSCORE);
+
+            const options = {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#f1f5f9',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#f1f5f9',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: '#94a3b8',
+                            maxTicksLimit: 10
+                        },
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: '收盘价',
+                            color: '#3b82f6',
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: '信号评分',
+                            color: '#f59e0b',
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            };
+
+            const datasets = [
+                {
+                    label: '收盘价',
+                    data: prices,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    borderWidth: 3,
+                    yAxisID: 'y'
+                },
+                {
+                    label: '信号评分',
+                    data: signals,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    borderWidth: 3,
+                    yAxisID: 'y1'
+                }
+            ];
+
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [
-                        {
-                            label: '收盘价',
-                            data: closeData,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: '信号评分',
-                            data: signalData,
-                            borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.4,
-                            yAxisID: 'y1'
-                        }
-                    ]
+                    datasets: datasets
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
-                    },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: '#94a3b8',
-                                font: { size: 14 }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleColor: '#f1f5f9',
-                            bodyColor: '#94a3b8',
-                            borderColor: 'rgba(148, 163, 184, 0.2)',
-                            borderWidth: 1
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                color: '#94a3b8',
-                                maxTicksLimit: 10
-                            },
-                            grid: {
-                                color: 'rgba(148, 163, 184, 0.1)'
-                            }
-                        },
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            ticks: {
-                                color: '#94a3b8'
-                            },
-                            grid: {
-                                color: 'rgba(148, 163, 184, 0.1)'
-                            }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            ticks: {
-                                color: '#94a3b8'
-                            },
-                            grid: {
-                                drawOnChartArea: false,
-                            }
-                        }
-                    }
-                }
+                options: options
             });
         }
 
-        document.getElementById('chartBtn').addEventListener('click', toggleChart);
+        function toggleChart() {
+            chartVisible = !chartVisible;
+            const chartWrapper = document.getElementById('chartWrapper');
+            const toggleBtn = document.getElementById('toggleChartBtn');
+            
+            if (chartVisible) {
+                chartWrapper.style.display = 'block';
+                toggleBtn.classList.add('active');
+                toggleBtn.textContent = '📊 隐藏图表';
+                createChart();
+            } else {
+                chartWrapper.style.display = 'none';
+                toggleBtn.classList.remove('active');
+                toggleBtn.textContent = '📊 信号评分';
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
+            }
+        }
+
         document.getElementById('refreshBtn').addEventListener('click', refreshData);
+        document.getElementById('toggleChartBtn').addEventListener('click', toggleChart);
 
         // 初始化加载数据
         fetchData();
