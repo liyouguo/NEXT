@@ -28,13 +28,13 @@ def index():
 @app.route('/nasdaq')
 def nasdaq_page():
     """NASDAQ 指数页面"""
-    return send_from_directory('static', 'nasdaq.html')
+    return send_from_directory('.', 'nasdaq.html')
 
 
 @app.route('/etf')
 def etf_page():
     """ETF 上升趋势页面"""
-    return send_from_directory('static', 'etf.html')
+    return send_from_directory('.', 'etf.html')
 
 
 # ============ NASDAQ API ============
