@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETF上升趋势 - 美股性价比分析系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #f1f5f9;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-back:hover {
+            color: #3b82f6;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.loading {
+            background: #f59e0b;
+        }
+
+        .status-dot.error {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            color: #94a3b8;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .btn:hover {
+            background: rgba(16, 185, 129, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 0.5rem;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        .filter-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            text-align: center;
+        }
+
+        .summary-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #10b981;
+        }
+
+        .table-container {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+        }
+
+        tbody tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .tag-market-sh {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .tag-market-sz {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .tag-ai {
+            background: rgba(139, 92, 246, 0.2);
+            color: #8b5cf6;
+        }
+
+        .positive {
+            color: #10b981;
+        }
+
+        .negative {
+            color: #ef4444;
+        }
+
+        .rank {
+            font-weight: 700;
+            color: #f59e0b;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #94a3b8;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            th, td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="nav-back">
+            ← 返回首页
+        </a>
+
+        <div class="header">
+            <h1>💎 ETF上升趋势</h1>
+            <p>挖掘处于上升趋势的ETF投资机会</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">正在加载数据...</span>
+            <span class="status-text" id="updateTime"></span>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="refreshBtn">🔄 刷新数据</button>
+        </div>
+
+        <div class="filters" id="filtersContainer"></div>
+
+        <div class="summary-grid" id="summaryGrid"></div>
+
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table id="etfTable">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>代码</th>
+                            <th>名称</th>
+                            <th>市场</th>
+                            <th>当日涨幅</th>
+                            <th>趋势总涨幅</th>
+                            <th>持续天数</th>
+                            <th>连涨天数</th>
+                            <th>涨停股数</th>
+                            <th>涨停占比</th>
+                            <th>AI洞察</th>
+                        </tr>
+                    </thead>
+                    <tbody id="etfTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let themes = {};
+        let currentFilter = 'all';
+
+        function updateStatus(isLoading, isError = false, message = '') {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            dot.className = 'status-dot';
+            if (isLoading) {
+                dot.classList.add('loading');
+                text.textContent = message || '正在加载数据...';
+            } else if (isError) {
+                dot.classList.add('error');
+                text.textContent = message || '数据加载失败';
+            } else {
+                text.textContent = message || '数据已就绪';
+            }
+        }
+
+        function updateUpdateTime() {
+            const now = new Date();
+            document.getElementById('updateTime').textContent = 
+                `更新时间: ${now.toLocaleString('zh-CN')}`;
+        }
+
+        async function fetchData() {
+            updateStatus(true);
+            try {
+                const response = await fetch('/api/etf/data');
+                const result = await response.json();
+                
+                if (result.success) {
+                    allData = result.data;
+                    themes = result.themes || {};
+                    updateStatus(false);
+                    updateUpdateTime();
+                    renderFilters();
+                    renderSummary();
+                    renderTable();
+                } else {
+                    updateStatus(false, true, '数据获取失败');
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                updateStatus(false, true, '网络错误');
+            }
+        }
+
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = '刷新中...';
+            
+            try {
+                const response = await fetch('/api/etf/refresh', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    await fetchData();
+                } else {
+                    updateStatus(false, true, '刷新失败: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                updateStatus(false, true, '刷新失败');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 刷新数据';
+            }
+        }
+
+        function renderFilters() {
+            const container = document.getElementById('filtersContainer');
+            let html = '<button class="filter-btn active" data-filter="all">全部</button>';
+            
+            for (const [theme, keywords] of Object.entries(themes)) {
+                html += `<button class="filter-btn" data-filter="${theme}">${theme}</button>`;
+            }
+            
+            container.innerHTML = html;
+            
+            container.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderTable();
+                });
+            });
+        }
+
+        function renderSummary() {
+            const container = document.getElementById('summaryGrid');
+            const filteredData = getFilteredData();
+            
+            container.innerHTML = `
+                <div class="summary-card">
+                    <div class="summary-label">ETF数量</div>
+                    <div class="summary-value">${filteredData.length}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">平均趋势涨幅</div>
+                    <div class="summary-value">${calculateAvgRatio(filteredData)}%</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">平均持续天数</div>
+                    <div class="summary-value">${calculateAvgDuration(filteredData)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">涨停股占比均值</div>
+                    <div class="summary-value">${calculateAvgLimitUp(filteredData)}%</div>
+                </div>
+            `;
+        }
+
+        function getFilteredData() {
+            if (currentFilter === 'all') {
+                return allData;
+            }
+            
+            const keywords = themes[currentFilter] || [];
+            return allData.filter(item => 
+                keywords.some(kw => item.name && item.name.includes(kw))
+            );
+        }
+
+        function calculateAvgRatio(data) {
+            if (!data.length) return '0.00';
+            const sum = data.reduce((acc, item) => acc + (parseFloat(item.etf_up_trend_total_ratio) || 0), 0);
+            return (sum / data.length).toFixed(2);
+        }
+
+        function calculateAvgDuration(data) {
+            if (!data.length) return '0';
+            const sum = data.reduce((acc, item) => acc + (parseInt(item.etf_up_trend_duration) || 0), 0);
+            return Math.round(sum / data.length);
+        }
+
+        function calculateAvgLimitUp(data) {
+            if (!data.length) return '0.00';
+            const sum = data.reduce((acc, item) => acc + (parseFloat(item.etf_limit_up_stock_pct) || 0), 0);
+            return (sum / data.length).toFixed(2);
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('etfTableBody');
+            const filteredData = getFilteredData();
+            
+            if (!filteredData.length) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="11">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📭</div>
+                                <div>暂无数据</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = filteredData.map((item, index) => {
+                const rank = index + 1;
+                const priceChange = item.price_change_ratio_pct;
+                const totalRatio = item.etf_up_trend_total_ratio;
+                const limitUpPct = item.etf_limit_up_stock_pct;
+                const tags = item.tags ? item.tags.split(',').filter(t => t.trim()) : [];
+                
+                return `
+                    <tr>
+                        <td><span class="rank">#${rank}</span></td>
+                        <td><strong>${item.code}</strong></td>
+                        <td>${item.name || '-'}</td>
+                        <td>
+                            <span class="tag ${item.market === '沪市' ? 'tag-market-sh' : 'tag-market-sz'}">${item.market}</span>
+                        </td>
+                        <td class="${priceChange && parseFloat(priceChange) >= 0 ? 'positive' : 'negative'}">
+                            ${priceChange ? priceChange + '%' : '-'}
+                        </td>
+                        <td class="${totalRatio && parseFloat(totalRatio) >= 0 ? 'positive' : 'negative'}">
+                            ${totalRatio ? totalRatio + '%' : '-'}
+                        </td>
+                        <td>${item.etf_up_trend_duration || '-'}</td>
+                        <td>${item.etf_up_trend_consecutive_up_days || '-'}</td>
+                        <td>${item.etf_limit_up_stock_cnt || '-'}</td>
+                        <td class="positive">${limitUpPct ? limitUpPct + '%' : '-'}</td>
+                        <td>
+                            ${tags.map(tag => `<span class="tag tag-ai">${tag.trim()}</span>`).join('')}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', refreshData);
+
+        // 初始化加载数据
+        fetchData();
+        
+        // 每5分钟自动刷新
+        setInterval(fetchData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

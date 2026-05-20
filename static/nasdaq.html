@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纳斯达克指数 - 美股性价比分析系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #f1f5f9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-back:hover {
+            color: #3b82f6;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.loading {
+            background: #f59e0b;
+        }
+
+        .status-dot.error {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            color: #94a3b8;
+        }
+
+        .chart-wrapper {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.3);
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-value.positive {
+            color: #10b981;
+        }
+
+        .stat-value.negative {
+            color: #ef4444;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .btn:hover {
+            background: rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn.refresh {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .btn.refresh:hover {
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .btn.refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .chart-wrapper {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="nav-back">
+            ← 返回首页
+        </a>
+
+        <div class="header">
+            <h1>📈 纳斯达克指数 (IXIC)</h1>
+            <p>收盘价与信号评分趋势分析</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">正在加载数据...</span>
+            <span class="status-text" id="updateTime"></span>
+        </div>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="controls">
+            <button class="btn" id="toggleChartBtn">📊 信号评分</button>
+            <button class="btn refresh" id="refreshBtn">🔄 刷新数据</button>
+        </div>
+
+        <div class="chart-wrapper" id="chartWrapper" style="display: none;">
+            <canvas id="mainChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        let data = [];
+        let chartVisible = false;
+
+        function updateStatus(isLoading, isError = false, message = '') {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            dot.className = 'status-dot';
+            if (isLoading) {
+                dot.classList.add('loading');
+                text.textContent = message || '正在加载数据...';
+            } else if (isError) {
+                dot.classList.add('error');
+                text.textContent = message || '数据加载失败';
+            } else {
+                text.textContent = message || '数据已就绪';
+            }
+        }
+
+        function updateUpdateTime() {
+            const now = new Date();
+            document.getElementById('updateTime').textContent = 
+                `更新时间: ${now.toLocaleString('zh-CN')}`;
+        }
+
+        async function fetchData() {
+            updateStatus(true);
+            try {
+                const response = await fetch('/api/nasdaq/data');
+                const result = await response.json();
+                
+                if (result.success) {
+                    data = result.data;
+                    updateStatus(false);
+                    updateUpdateTime();
+                    renderStats();
+                    if (chartVisible) {
+                        createChart();
+                    }
+                } else {
+                    updateStatus(false, true, '数据获取失败');
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                updateStatus(false, true, '网络错误');
+            }
+        }
+
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = '刷新中...';
+            
+            try {
+                const response = await fetch('/api/nasdaq/refresh', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    await fetchData();
+                } else {
+                    updateStatus(false, true, '刷新失败: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                updateStatus(false, true, '刷新失败');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 刷新数据';
+            }
+        }
+
+        function calculateStats() {
+            if (!data.length) return null;
+            
+            const prices = data.map(d => d.CLOSE);
+            const firstPrice = prices[0];
+            const lastPrice = prices[prices.length - 1];
+            const maxPrice = Math.max(...prices);
+            const minPrice = Math.min(...prices);
+            const priceChange = lastPrice - firstPrice;
+            const percentChange = ((priceChange / firstPrice) * 100).toFixed(2);
+
+            return {
+                current: lastPrice.toFixed(2),
+                change: priceChange.toFixed(2),
+                percentChange: percentChange,
+                max: maxPrice.toFixed(2),
+                min: minPrice.toFixed(2)
+            };
+        }
+
+        function renderStats() {
+            const stats = calculateStats();
+            const statsGrid = document.getElementById('statsGrid');
+            
+            if (!stats) {
+                statsGrid.innerHTML = '<div class="stat-card"><div class="stat-label">暂无数据</div></div>';
+                return;
+            }
+            
+            const isPositive = parseFloat(stats.change) >= 0;
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">当前收盘价</div>
+                    <div class="stat-value">${stats.current}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">期间涨跌</div>
+                    <div class="stat-value ${isPositive ? 'positive' : 'negative'}">
+                        ${isPositive ? '+' : ''}${stats.change} (${isPositive ? '+' : ''}${stats.percentChange}%)
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">最高收盘</div>
+                    <div class="stat-value positive">${stats.max}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">最低收盘</div>
+                    <div class="stat-value negative">${stats.min}</div>
+                </div>
+            `;
+        }
+
+        function createChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+
+            if (!data.length) return;
+
+            const labels = data.map(d => d.PDATE);
+            const prices = data.map(d => d.CLOSE);
+            const signals = data.map(d => d.SIGNALSCORE);
+
+            const options = {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#f1f5f9',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#f1f5f9',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: '#94a3b8',
+                            maxTicksLimit: 10
+                        },
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: '收盘价',
+                            color: '#3b82f6',
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: '信号评分',
+                            color: '#f59e0b',
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            };
+
+            const datasets = [
+                {
+                    label: '收盘价',
+                    data: prices,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    borderWidth: 3,
+                    yAxisID: 'y'
+                },
+                {
+                    label: '信号评分',
+                    data: signals,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    borderWidth: 3,
+                    yAxisID: 'y1'
+                }
+            ];
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: options
+            });
+        }
+
+        function toggleChart() {
+            chartVisible = !chartVisible;
+            const chartWrapper = document.getElementById('chartWrapper');
+            const toggleBtn = document.getElementById('toggleChartBtn');
+            
+            if (chartVisible) {
+                chartWrapper.style.display = 'block';
+                toggleBtn.classList.add('active');
+                toggleBtn.textContent = '📊 隐藏图表';
+                createChart();
+            } else {
+                chartWrapper.style.display = 'none';
+                toggleBtn.classList.remove('active');
+                toggleBtn.textContent = '📊 信号评分';
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
+            }
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', refreshData);
+        document.getElementById('toggleChartBtn').addEventListener('click', toggleChart);
+
+        // 初始化加载数据
+        fetchData();
+        
+        // 每5分钟自动刷新
+        setInterval(fetchData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
