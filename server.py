@@ -26,14 +26,14 @@ def index():
     return send_from_directory('.', 'index.html')
 
 
-@app.route('/nasdaq')
+@app.route('/nasdaq.html')
 # @app.route('/nasdaq.html')
 def nasdaq_page():
     """NASDAQ 指数页面"""
     return send_from_directory('static', 'nasdaq.html')
 
 
-@app.route('/etf')
+@app.route('/etf.html')
 # @app.route('/etf.html')
 def etf_page():
     """ETF 上升趋势页面"""
