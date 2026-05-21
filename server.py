@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 导入独立的数据模块
-from data import get_nasdaq_chart_data, get_etf_uptrend_data, get_themes, get_fund_signal_data
+from data import get_nasdaq_chart_data, get_etf_uptrend_data, get_themes, get_fund_signal_data, get_fund_pool_data, get_preset_queries
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -45,6 +45,13 @@ def etf_page():
 def fund_page():
     """基金波动分析页面"""
     return send_from_directory('.', 'fund.html')
+
+
+@app.route('/fund_pool')
+@app.route('/fund_pool.html')
+def fund_pool_page():
+    """基金池筛选页面"""
+    return send_from_directory('.', 'fund_pool.html')
 
 
 # ============ NASDAQ API ============
@@ -183,6 +190,52 @@ def refresh_fund_data():
         }), 500
 
 
+# ============ 基金池 API ============
+@app.route('/api/fund_pool/presets', methods=['GET'])
+def get_fund_pool_presets():
+    """
+    获取基金池预设查询条件
+    """
+    try:
+        presets = get_preset_queries()
+        return jsonify({
+            'success': True,
+            'presets': presets
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/fund_pool/data', methods=['GET', 'POST'])
+def get_fund_pool():
+    """
+    获取基金池数据
+    """
+    try:
+        question = None
+        if request.method == 'POST':
+            data = request.get_json() or {}
+            question = data.get('question')
+        else:
+            question = request.args.get('question')
+        
+        fund_pool_data = get_fund_pool_data(question=question)
+        
+        if not fund_pool_data.get('success'):
+            return jsonify(fund_pool_data), 400
+        
+        return jsonify(fund_pool_data)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("🚀 美股性价比分析系统启动中...")
@@ -191,5 +244,6 @@ if __name__ == '__main__':
     print("📈 NASDAQ: http://localhost:5000/nasdaq")
     print("💎 ETF: http://localhost:5000/etf")
     print("💰 基金: http://localhost:5000/fund")
+    print("🎯 基金池: http://localhost:5000/fund_pool")
     print("=" * 50)
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基金池筛选 - 美股性价比分析系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #f1f5f9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-back:hover {
+            color: #3b82f6;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.loading {
+            background: #f59e0b;
+        }
+
+        .status-dot.error {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            color: #94a3b8;
+        }
+
+        .controls-section {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 1rem;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .preset-btn {
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 0.5rem;
+            background: rgba(30, 41, 59, 0.5);
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .preset-btn:hover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .preset-btn.active {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .preset-btn-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .preset-btn-desc {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .custom-query {
+            margin-bottom: 1rem;
+        }
+
+        .custom-query label {
+            display: block;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .custom-query input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 0.5rem;
+            background: rgba(15, 23, 42, 0.5);
+            color: #f1f5f9;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .custom-query input:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .query-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .query-info-text {
+            color: #10b981;
+            font-size: 0.9rem;
+        }
+
+        .results-section {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .results-count {
+            color: #cbd5e1;
+            font-size: 1.1rem;
+        }
+
+        .results-count strong {
+            color: #10b981;
+            font-size: 1.5rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.5);
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+
+        tr:hover {
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .preset-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            th, td {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="nav-back">
+            ← 返回首页
+        </a>
+
+        <div class="header">
+            <h1>🎯 基金池筛选</h1>
+            <p>使用问财条件智能筛选优质基金</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">准备就绪，选择查询条件开始</span>
+            <span class="status-text" id="updateTime"></span>
+        </div>
+
+        <div class="controls-section">
+            <h2 class="section-title">📋 预设查询</h2>
+            <div class="preset-buttons" id="presetButtons"></div>
+
+            <div class="custom-query">
+                <label for="customQuestion">✏️ 自定义查询</label>
+                <input type="text" id="customQuestion" placeholder="例如：近一年收益率>40%，规模>10亿，场外基金">
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="queryBtn">🔍 开始查询</button>
+            </div>
+
+            <div class="query-info" id="queryInfo" style="display: none;">
+                <span class="query-info-text" id="queryInfoText"></span>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">
+                <div class="results-count">
+                    找到 <strong id="fundCount">0</strong> 只基金
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="fundTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+            <div class="empty-state-icon">📊</div>
+            <p>选择查询条件开始筛选基金</p>
+        </div>
+    </div>
+
+    <script>
+        let currentPreset = null;
+        let currentData = null;
+
+        async function loadPresets() {
+            try {
+                const response = await fetch('/api/fund_pool/presets');
+                const result = await response.json();
+                if (result.success) {
+                    renderPresets(result.presets);
+                }
+            } catch (e) {
+                console.error('加载预设失败:', e);
+            }
+        }
+
+        function renderPresets(presets) {
+            const container = document.getElementById('presetButtons');
+            container.innerHTML = presets.map(preset => `
+                <button class="preset-btn" data-id="${preset.id}" data-question="${preset.question || ''}" data-is-custom="${!!preset.is_custom}">
+                    <div class="preset-btn-name">${preset.name}</div>
+                    <div class="preset-btn-desc">${preset.description}</div>
+                </button>
+            `).join('');
+
+            container.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const id = btn.dataset.id;
+                    const question = btn.dataset.question;
+                    const isCustom = btn.dataset.isCustom === 'true';
+                    
+                    currentPreset = id;
+                    
+                    if (!isCustom) {
+                        document.getElementById('customQuestion').value = question;
+                    }
+                });
+            });
+        }
+
+        function updateStatus(isLoading, isError = false, message = '') {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            dot.className = 'status-dot';
+            if (isLoading) {
+                dot.classList.add('loading');
+                text.textContent = message || '正在查询...';
+            } else if (isError) {
+                dot.classList.add('error');
+                text.textContent = message || '查询失败';
+            } else {
+                text.textContent = message || '准备就绪';
+            }
+        }
+
+        function updateUpdateTime() {
+            const now = new Date();
+            document.getElementById('updateTime').textContent = 
+                `更新时间: ${now.toLocaleString('zh-CN')}`;
+        }
+
+        async function queryFunds() {
+            const question = document.getElementById('customQuestion').value.trim();
+            if (!question) {
+                alert('请输入查询条件');
+                return;
+            }
+
+            const btn = document.getElementById('queryBtn');
+            btn.disabled = true;
+            btn.textContent = '查询中...';
+            
+            updateStatus(true, false, '正在问财查询...');
+
+            try {
+                const response = await fetch('/api/fund_pool/data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentData = result;
+                    renderResults(result);
+                    showQueryInfo(question);
+                    updateStatus(false, false, '查询成功');
+                    updateUpdateTime();
+                } else {
+                    updateStatus(false, true, '查询失败: ' + result.error);
+                    alert('查询失败: ' + result.error);
+                }
+            } catch (e) {
+                console.error('查询错误:', e);
+                updateStatus(false, true, '网络错误');
+                alert('查询失败，请检查网络');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 开始查询';
+            }
+        }
+
+        function showQueryInfo(question) {
+            const infoEl = document.getElementById('queryInfo');
+            infoEl.style.display = 'block';
+            document.getElementById('queryInfoText').textContent = '当前查询: ' + question;
+        }
+
+        function renderResults(data) {
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('fundCount').textContent = data.count;
+
+            if (!data.funds || data.funds.length === 0) {
+                return;
+            }
+
+            const firstFund = data.funds[0];
+            const columns = Object.keys(firstFund);
+
+            const thead = document.getElementById('tableHead');
+            thead.innerHTML = `
+                <tr>
+                    ${columns.map(col => `<th>${col}</th>`).join('')}
+                </tr>
+            `;
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = data.funds.map(fund => `
+                <tr>
+                    ${columns.map(col => {
+                        let val = fund[col];
+                        if (typeof val === 'number') {
+                            if (Number.isInteger(val)) {
+                                val = val.toString();
+                            } else {
+                                val = val.toFixed(2);
+                            }
+                        } else if (val === null || val === undefined) {
+                            val = '';
+                        } else {
+                            val = String(val);
+                        }
+                        return `<td>${val}</td>`;
+                    }).join('')}
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('queryBtn').addEventListener('click', queryFunds);
+
+        // 页面加载
+        loadPresets();
+    </script>
+</body>
+</html>
