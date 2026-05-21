@@ -3,7 +3,7 @@ Flask 服务器主文件
 负责路由和API接口，数据获取由独立模块处理
 """
 
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 import sys
 import os
@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 导入独立的数据模块
-from data import get_nasdaq_chart_data, get_etf_uptrend_data, get_themes
+from data import get_nasdaq_chart_data, get_etf_uptrend_data, get_themes, get_fund_signal_data
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -38,6 +38,13 @@ def nasdaq_page():
 def etf_page():
     """ETF 上升趋势页面"""
     return send_from_directory('static', 'etf.html')
+
+
+@app.route('/fund')
+@app.route('/fund.html')
+def fund_page():
+    """基金波动分析页面"""
+    return send_from_directory('.', 'fund.html')
 
 
 # ============ NASDAQ API ============
@@ -117,12 +124,72 @@ def refresh_etf_data():
         }), 500
 
 
+# ============ 基金 API ============
+@app.route('/api/fund/data', methods=['GET'])
+def get_fund_data():
+    """
+    获取基金波动分析数据
+    """
+    try:
+        code = request.args.get('code', '015790')
+        time_range = request.args.get('timeRange', 'Month')
+        data = get_fund_signal_data(code=code, time_range=time_range)
+        
+        if 'error' in data:
+            return jsonify({
+                'success': False,
+                'error': data['error'],
+                'errorCode': data.get('errorCode', -1)
+            }), 400
+            
+        return jsonify({
+            'success': True,
+            'data': data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/fund/refresh', methods=['POST'])
+def refresh_fund_data():
+    """
+    刷新基金波动分析数据
+    """
+    try:
+        from flask import request
+        data = request.get_json() or {}
+        code = data.get('code', '015790')
+        time_range = data.get('timeRange', 'Month')
+        fund_data = get_fund_signal_data(code=code, time_range=time_range)
+        
+        if 'error' in fund_data:
+            return jsonify({
+                'success': False,
+                'error': fund_data['error'],
+                'errorCode': fund_data.get('errorCode', -1)
+            }), 400
+            
+        return jsonify({
+            'success': True,
+            'data': fund_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("🚀 美股性价比分析系统启动中...")
     print("=" * 50)
     print("📊 首页: http://localhost:5000")
-    print("� NASDAQ: http://localhost:5000/nasdaq")
+    print("📈 NASDAQ: http://localhost:5000/nasdaq")
     print("💎 ETF: http://localhost:5000/etf")
+    print("💰 基金: http://localhost:5000/fund")
     print("=" * 50)
     app.run(host='0.0.0.0', port=5000, debug=True)

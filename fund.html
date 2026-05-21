@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基金波动分析 - 美股性价比分析系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #f1f5f9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-back:hover {
+            color: #3b82f6;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f59e0b 0%, #ec4899 50%, #ef4444 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.loading {
+            background: #f59e0b;
+        }
+
+        .status-dot.error {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            color: #94a3b8;
+        }
+
+        .level-indicator {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 2rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .level-badge.level-low {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .level-badge.level-medium-low {
+            background: linear-gradient(135deg, #34d399, #10b981);
+            color: white;
+        }
+
+        .level-badge.level-medium {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .level-badge.level-medium-high {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: white;
+        }
+
+        .level-badge.level-high {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .level-desc {
+            font-size: 1.25rem;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+        }
+
+        .signal-text {
+            font-size: 1.1rem;
+            color: #f59e0b;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(245, 158, 11, 0.3);
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .stat-value.up {
+            color: #10b981;
+        }
+
+        .stat-value.down {
+            color: #ef4444;
+        }
+
+        .stat-value.neutral {
+            color: #94a3b8;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .btn:hover {
+            background: rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn.refresh {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .btn.refresh:hover {
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .btn.refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn.time-range {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .btn.time-range:hover {
+            background: rgba(245, 158, 11, 0.3);
+        }
+
+        .btn.time-range.active {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .interpretation {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .interpretation h3 {
+            color: #f59e0b;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .interpretation p {
+            color: #cbd5e1;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .interpretation ul {
+            margin-left: 1.5rem;
+            color: #cbd5e1;
+        }
+
+        .interpretation li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="nav-back">
+            ← 返回首页
+        </a>
+
+        <div class="header">
+            <h1>💰 基金波动分析</h1>
+            <p>同花顺趋势信号 - RSI 指标分析</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">正在加载数据...</span>
+            <span class="status-text" id="updateTime"></span>
+        </div>
+
+        <div class="level-indicator" id="levelIndicator" style="display: none;">
+            <div class="level-badge" id="levelBadge">加载中</div>
+            <div class="level-desc" id="levelDesc"></div>
+            <div class="signal-text" id="signalText"></div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="controls">
+            <button class="btn time-range active" data-range="Week">近一周</button>
+            <button class="btn time-range" data-range="Month">近一月</button>
+            <button class="btn time-range" data-range="Year">近一年</button>
+            <button class="btn refresh" id="refreshBtn">🔄 刷新数据</button>
+        </div>
+
+        <div class="interpretation" id="interpretation" style="display: none;">
+            <h3>📊 信号解读</h3>
+            <div id="interpretationContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentTimeRange = 'Month';
+        let fundData = null;
+
+        function updateStatus(isLoading, isError = false, message = '') {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            dot.className = 'status-dot';
+            if (isLoading) {
+                dot.classList.add('loading');
+                text.textContent = message || '正在加载数据...';
+            } else if (isError) {
+                dot.classList.add('error');
+                text.textContent = message || '数据加载失败';
+            } else {
+                text.textContent = message || '数据已就绪';
+            }
+        }
+
+        function updateUpdateTime() {
+            const now = new Date();
+            document.getElementById('updateTime').textContent = 
+                `更新时间: ${now.toLocaleString('zh-CN')}`;
+        }
+
+        async function fetchData() {
+            updateStatus(true);
+            try {
+                const response = await fetch(`/api/fund/data?timeRange=${currentTimeRange}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    fundData = result.data;
+                    updateStatus(false);
+                    updateUpdateTime();
+                    renderData();
+                } else {
+                    updateStatus(false, true, result.error || '数据获取失败');
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                updateStatus(false, true, '网络错误');
+            }
+        }
+
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = '刷新中...';
+            
+            try {
+                const response = await fetch('/api/fund/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeRange: currentTimeRange })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    fundData = result.data;
+                    updateStatus(false);
+                    updateUpdateTime();
+                    renderData();
+                } else {
+                    updateStatus(false, true, '刷新失败: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                updateStatus(false, true, '刷新失败');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 刷新数据';
+            }
+        }
+
+        function renderData() {
+            if (!fundData) return;
+
+            // 显示 RSI 级别指示器
+            const levelIndicator = document.getElementById('levelIndicator');
+            levelIndicator.style.display = 'block';
+
+            const levelBadge = document.getElementById('levelBadge');
+            levelBadge.textContent = fundData.levelName;
+            levelBadge.className = 'level-badge ' + fundData.levelClass;
+
+            document.getElementById('levelDesc').textContent = fundData.levelDesc;
+            document.getElementById('signalText').textContent = fundData.signalText;
+
+            // 渲染统计卡片
+            renderStats();
+
+            // 渲染解读
+            renderInterpretation();
+        }
+
+        function renderStats() {
+            const statsGrid = document.getElementById('statsGrid');
+            const dataList = fundData.dataList || [];
+
+            if (!dataList.length) {
+                statsGrid.innerHTML = '<div class="stat-card"><div class="stat-label">暂无数据</div></div>';
+                return;
+            }
+
+            statsGrid.innerHTML = dataList.map(item => `
+                <div class="stat-card">
+                    <div class="stat-label">${item.title}</div>
+                    <div class="stat-value ${item.trend}">${item.value}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderInterpretation() {
+            const interpretation = document.getElementById('interpretation');
+            const content = document.getElementById('interpretationContent');
+            const dataList = fundData.dataList || [];
+
+            interpretation.style.display = 'block';
+
+            let interpretationText = '<p>根据当前信号分析：</p><ul>';
+
+            if (fundData.levelClass === 'level-low' || fundData.levelClass === 'level-medium-low') {
+                interpretationText += '<li>📉 RSI处于低位，市场处于超卖状态，可能出现反弹机会</li>';
+                interpretationText += '<li>💰 可考虑分批建仓，把握低位布局时机</li>';
+            } else if (fundData.levelClass === 'level-medium') {
+                interpretationText += '<li>📊 RSI处于中性区间，市场相对平稳</li>';
+                interpretationText += '<li>⏳ 建议观望为主，等待明确信号</li>';
+            } else {
+                interpretationText += '<li>📈 RSI处于高位，市场处于超买状态，注意回调风险</li>';
+                interpretationText += '<li>⚠️ 可考虑适当减仓，控制风险</li>';
+            }
+
+            if (dataList.length >= 4) {
+                const similarDays = dataList[0].value;
+                const upProbability = dataList[1].value;
+                const avgReturn = dataList[2].value;
+                const maxReturn = dataList[3].value;
+
+                interpretationText += `</ul><p style="margin-top: 1.5rem;">历史数据参考：</p><ul>`;
+                interpretationText += `<li>📅 历史上有 <strong>${similarDays}</strong> 个相似日</li>`;
+                interpretationText += `<li>📈 相似日之后上涨概率：<strong>${upProbability}</strong></li>`;
+                interpretationText += `<li>📊 相似日之后平均涨幅：<strong>${avgReturn}</strong></li>`;
+                interpretationText += `<li>🚀 相似日之后最大涨幅：<strong>${maxReturn}</strong></li>`;
+            }
+
+            interpretationText += '</ul>';
+            content.innerHTML = interpretationText;
+        }
+
+        function setTimeRange(range) {
+            currentTimeRange = range;
+            
+            document.querySelectorAll('.btn.time-range').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.range === range) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            fetchData();
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', refreshData);
+        document.querySelectorAll('.btn.time-range').forEach(btn => {
+            btn.addEventListener('click', () => setTimeRange(btn.dataset.range));
+        });
+
+        // 初始化加载数据
+        fetchData();
+        
+        // 每5分钟自动刷新
+        setInterval(fetchData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
