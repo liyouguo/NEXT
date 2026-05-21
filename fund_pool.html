@@ -285,6 +285,31 @@
             background: rgba(30, 41, 59, 0.5);
         }
 
+        /* 风险标签特殊样式 */
+        .risk-tag-cell {
+            font-weight: 600;
+        }
+        
+        .low-risk {
+            background: rgba(16, 185, 129, 0.15) !important;
+            color: #34d399 !important;
+        }
+        
+        .medium-risk {
+            background: rgba(245, 158, 11, 0.15) !important;
+            color: #fbbf24 !important;
+        }
+        
+        .high-risk {
+            background: rgba(249, 115, 22, 0.15) !important;
+            color: #f97316 !important;
+        }
+        
+        .very-high-risk {
+            background: rgba(239, 68, 68, 0.15) !important;
+            color: #f87171 !important;
+        }
+
         .empty-state {
             text-align: center;
             padding: 3rem;
@@ -496,18 +521,48 @@
             const firstFund = data.funds[0];
             const columns = Object.keys(firstFund);
 
+            // 调整列顺序，让风险标签列靠前
+            const priorityCols = [];
+            const normalCols = [];
+            columns.forEach(col => {
+                if (col.includes('风险') || col.includes('波动率')) {
+                    priorityCols.push(col);
+                } else if (col.includes('名称') || col.includes('代码')) {
+                    priorityCols.unshift(col);
+                } else {
+                    normalCols.push(col);
+                }
+            });
+            const sortedColumns = [...new Set([...priorityCols, ...normalCols])];
+
             const thead = document.getElementById('tableHead');
             thead.innerHTML = `
                 <tr>
-                    ${columns.map(col => `<th>${col}</th>`).join('')}
+                    ${sortedColumns.map(col => `<th>${col}</th>`).join('')}
                 </tr>
             `;
 
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = data.funds.map(fund => `
                 <tr>
-                    ${columns.map(col => {
+                    ${sortedColumns.map(col => {
                         let val = fund[col];
+                        let cellClass = '';
+                        
+                        // 为风险标签列添加特殊样式
+                        if (col === '风险标签' && val) {
+                            cellClass = 'risk-tag-cell';
+                            if (val.includes('🟢')) {
+                                cellClass += ' low-risk';
+                            } else if (val.includes('🟡')) {
+                                cellClass += ' medium-risk';
+                            } else if (val.includes('🟠')) {
+                                cellClass += ' high-risk';
+                            } else if (val.includes('🔴')) {
+                                cellClass += ' very-high-risk';
+                            }
+                        }
+                        
                         if (typeof val === 'number') {
                             if (Number.isInteger(val)) {
                                 val = val.toString();
@@ -519,7 +574,8 @@
                         } else {
                             val = String(val);
                         }
-                        return `<td>${val}</td>`;
+                        
+                        return `<td class="${cellClass}">${val}</td>`;
                     }).join('')}
                 </tr>
             `).join('');
