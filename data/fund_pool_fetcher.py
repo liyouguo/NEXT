@@ -33,10 +33,24 @@ def get_fund_pool_data(question=None, query_type="fund", per_page=100, loop=True
         )
         
         if df is None or len(df) == 0:
-            return {
-                "success": False,
-                "error": "未获取到数据"
-            }
+            # 尝试简化查询，去掉波动率条件
+            print("未获取到数据，尝试简化查询...")
+            simple_question = "今年涨幅top20,场外基金"
+            df = pywencai.get(
+                question=simple_question,
+                query_type=query_type,
+                per_page=per_page,
+                loop=loop
+            )
+            
+            if df is None or len(df) == 0:
+                return {
+                    "success": False,
+                    "error": "未获取到数据，尝试简化查询也失败"
+                }
+            question = simple_question
+        
+        print(f"成功获取到 {len(df)} 行数据，{len(df.columns)} 列")
         
         # 处理数据格式化
         result = {
@@ -44,6 +58,7 @@ def get_fund_pool_data(question=None, query_type="fund", per_page=100, loop=True
             "query_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "question": question,
             "count": len(df),
+            "columns": list(df.columns),
             "funds": []
         }
         
@@ -65,10 +80,13 @@ def get_fund_pool_data(question=None, query_type="fund", per_page=100, loop=True
             fund_info = add_risk_analysis(fund_info)
             result["funds"].append(fund_info)
         
+        print(f"数据处理完成，共 {len(result['funds'])} 只基金")
         return result
         
     except Exception as e:
         print(f"问财查询错误: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         return {
             "success": False,
             "error": str(e)
