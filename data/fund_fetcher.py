@@ -1,10 +1,32 @@
 """
 基金波动分析数据获取模块
 从同花顺获取场外基金趋势信号数据
+支持参数化基金池和自动查询特定标的
 """
 import requests
 import json
 from datetime import datetime
+
+# =====================
+# 基金池配置
+# =====================
+DEFAULT_FUND_POOL = [
+    {'code': '015790', 'name': '广发中证军工ETF联接A'},
+    {'code': '005911', 'name': '广发双擎升级混合A'},
+    {'code': '161725', 'name': '招商中证白酒指数(LOF)A'},
+    {'code': '007339', 'name': '易方达中小盘混合'},
+    {'code': '005827', 'name': '易方达蓝筹精选混合'},
+]
+
+
+def get_fund_pool():
+    """
+    获取预设基金池
+    
+    Returns:
+        list: 基金池列表，每个元素包含code和name
+    """
+    return DEFAULT_FUND_POOL
 
 
 def get_fund_signal_data(code="015790", time_range="Month", signal_type="hexinrsi"):
@@ -17,7 +39,7 @@ def get_fund_signal_data(code="015790", time_range="Month", signal_type="hexinrs
         signal_type: 信号类型，hexinrsi
         
     Returns:
-        字典格式的基金数据
+        dict: 基金数据或错误信息
     """
     url = "https://dq.10jqka.com.cn/fuyao/fund_fe_components/fund_performance_trend/v1/signal_statistics"
     
@@ -55,6 +77,16 @@ def get_fund_signal_data(code="015790", time_range="Month", signal_type="hexinrs
             signal_text = config.get('robotText', '').replace('<span>', '').replace('</span>', '')
             data_list = config.get('dataList', [])
             
+            # 计算RSI数值（根据级别0-4对应20-80
+            rsi_value_map = {
+                '0': 20,
+                '1': 35,
+                '2': 50,
+                '3': 65,
+                '4': 80
+            }
+            rsi_value = rsi_value_map.get(rsi_level, 50)
+            
             level_map = {
                 '0': {'name': '极低', 'desc': '超卖区域', 'class': 'level-low'},
                 '1': {'name': '较低', 'desc': '偏低区域', 'class': 'level-medium-low'},
@@ -69,6 +101,7 @@ def get_fund_signal_data(code="015790", time_range="Month", signal_type="hexinrs
                 'code': code,
                 'queryTime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'rsiLevel': rsi_level,
+                'rsiValue': rsi_value,
                 'levelName': level_info['name'],
                 'levelDesc': level_info['desc'],
                 'levelClass': level_info['class'],
@@ -105,8 +138,38 @@ def get_fund_signal_data(code="015790", time_range="Month", signal_type="hexinrs
         return {'error': str(e), 'errorCode': -1}
 
 
+def get_batch_fund_signals(fund_codes=None, time_range="Month", signal_type="hexinrsi"):
+    """
+    批量查询多个基金的信号数据
+    
+    Args:
+        fund_codes: 基金代码列表，如果为None则使用默认基金池
+        time_range: 时间范围，Month/Week/Year
+        signal_type: 信号类型，hexinrsi
+        
+    Returns:
+        dict: 包含所有基金数据的字典，key为基金代码，value为对应数据
+    """
+    # 如果没有指定基金代码，使用默认基金池
+    if fund_codes is None:
+        fund_pool = get_fund_pool()
+        fund_codes = [fund['code'] for fund in fund_pool]
+    
+    results = {}
+    for code in fund_codes:
+        result = get_fund_signal_data(code, time_range, signal_type)
+        results[code] = result
+    
+    return results
+
+
 def get_themes():
-    """获取时间范围主题"""
+    """
+    获取时间范围主题
+    
+    Returns:
+        dict: 时间范围显示名称映射
+    """
     return {
         'Week': '近一周',
         'Month': '近一月',
@@ -115,5 +178,14 @@ def get_themes():
 
 
 if __name__ == '__main__':
+    # 测试单个基金查询
+    print("=== 测试单个基金查询 ===")
     data = get_fund_signal_data()
     print(json.dumps(data, ensure_ascii=False, indent=2))
+    
+    print("\n=== 测试批量基金查询 ===")
+    batch_data = get_batch_fund_signals()
+    print(f"共查询 {len(batch_data)} 只基金")
+    for code, result in batch_data.items():
+        print(f"\n基金 {code}:")
+        print(f"  RSI级别: {result.get('levelName', '未知')}")
