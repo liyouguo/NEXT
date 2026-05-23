@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 导入独立的数据模块
-from data import get_nasdaq_chart_data, get_etf_uptrend_data, get_themes, get_fund_signal_data, get_fund_pool_data, get_preset_queries
+from data import get_nasdaq_chart_data, get_etf_uptrend_data, get_themes, get_fund_signal_data, get_fund_pool_data, get_preset_queries, get_broad_index_data
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -52,6 +52,13 @@ def fund_page():
 def fund_pool_page():
     """基金池筛选页面"""
     return send_from_directory('.', 'fund_pool.html')
+
+
+@app.route('/broad_index')
+@app.route('/broad_index.html')
+def broad_index_page():
+    """宽基指数趋势页面"""
+    return send_from_directory('.', 'broad_index.html')
 
 
 # ============ NASDAQ API ============
@@ -236,6 +243,37 @@ def get_fund_pool():
         }), 500
 
 
+# ============ 宽基指数 API ============
+@app.route('/api/broad_index/data', methods=['GET'])
+def get_broad_index():
+    """
+    获取宽基指数趋势数据
+    """
+    try:
+        data = get_broad_index_data()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/broad_index/refresh', methods=['POST'])
+def refresh_broad_index():
+    """
+    刷新宽基指数数据
+    """
+    try:
+        data = get_broad_index_data()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("🚀 美股性价比分析系统启动中...")
@@ -245,5 +283,6 @@ if __name__ == '__main__':
     print("💎 ETF: http://localhost:5000/etf")
     print("💰 基金: http://localhost:5000/fund")
     print("🎯 基金池: http://localhost:5000/fund_pool")
+    print("📉 宽基指数: http://localhost:5000/broad_index")
     print("=" * 50)
     app.run(host='0.0.0.0', port=5000, debug=True)
