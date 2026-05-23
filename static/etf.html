@@ -214,6 +214,37 @@
             font-size: 0.9rem;
             border-bottom: 1px solid rgba(148, 163, 184, 0.1);
             white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        th:hover {
+            color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        th.sortable {
+            position: relative;
+        }
+
+        th.sortable::after {
+            content: '↕';
+            margin-left: 0.5rem;
+            opacity: 0.3;
+            font-size: 0.8rem;
+        }
+
+        th.sortable.sorted-asc::after {
+            content: '↑';
+            opacity: 1;
+            color: #3b82f6;
+        }
+
+        th.sortable.sorted-desc::after {
+            content: '↓';
+            opacity: 1;
+            color: #3b82f6;
         }
 
         td {
@@ -323,12 +354,12 @@
                             <th>代码</th>
                             <th>名称</th>
                             <th>市场</th>
-                            <th>当日涨幅</th>
-                            <th>趋势总涨幅</th>
-                            <th>持续天数</th>
-                            <th>连涨天数</th>
-                            <th>涨停股数</th>
-                            <th>涨停占比</th>
+                            <th class="sortable" data-field="price_change_ratio_pct">当日涨幅</th>
+                            <th class="sortable" data-field="etf_up_trend_total_ratio">趋势总涨幅</th>
+                            <th class="sortable" data-field="etf_up_trend_duration">持续天数</th>
+                            <th class="sortable" data-field="etf_up_trend_consecutive_up_days">连涨天数</th>
+                            <th class="sortable" data-field="etf_limit_up_stock_cnt">涨停股数</th>
+                            <th class="sortable" data-field="etf_limit_up_stock_pct">涨停占比</th>
                             <th>AI洞察</th>
                         </tr>
                     </thead>
@@ -343,6 +374,8 @@
         let allData = [];
         let themes = {};
         let currentFilter = 'all';
+        let currentSortField = null;
+        let currentSortOrder = 'desc';
 
         function updateStatus(isLoading, isError = false, message = '') {
             const dot = document.getElementById('statusDot');
@@ -369,7 +402,11 @@
         async function fetchData() {
             updateStatus(true);
             try {
-                const response = await fetch('/api/etf/data');
+                let url = '/api/etf/data';
+                if (currentSortField) {
+                    url += `?sortField=${currentSortField}&sortOrder=${currentSortOrder}`;
+                }
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 if (result.success) {
@@ -380,6 +417,7 @@
                     renderFilters();
                     renderSummary();
                     renderTable();
+                    updateSortIndicators();
                 } else {
                     updateStatus(false, true, '数据获取失败');
                 }
@@ -395,11 +433,26 @@
             btn.textContent = '刷新中...';
             
             try {
-                const response = await fetch('/api/etf/refresh', { method: 'POST' });
+                const response = await fetch('/api/etf/refresh', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sortField: currentSortField,
+                        sortOrder: currentSortOrder
+                    })
+                });
                 const result = await response.json();
                 
                 if (result.success) {
-                    await fetchData();
+                    if (result.data) {
+                        allData = result.data;
+                    }
+                    updateStatus(false);
+                    updateUpdateTime();
+                    renderSummary();
+                    renderTable();
                 } else {
                     updateStatus(false, true, '刷新失败: ' + result.error);
                 }
@@ -410,6 +463,28 @@
                 btn.disabled = false;
                 btn.textContent = '🔄 刷新数据';
             }
+        }
+
+        async function handleSort(field) {
+            if (currentSortField === field) {
+                // 切换排序顺序
+                currentSortOrder = currentSortOrder === 'desc' ? 'asc' : 'desc';
+            } else {
+                // 新字段，默认降序
+                currentSortField = field;
+                currentSortOrder = 'desc';
+            }
+            
+            await fetchData();
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (th.dataset.field === currentSortField) {
+                    th.classList.add(`sorted-${currentSortOrder}`);
+                }
+            });
         }
 
         function renderFilters() {
@@ -537,6 +612,13 @@
         }
 
         document.getElementById('refreshBtn').addEventListener('click', refreshData);
+        
+        // 为可排序的表头添加点击事件
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                handleSort(th.dataset.field);
+            });
+        });
 
         // 初始化加载数据
         fetchData();

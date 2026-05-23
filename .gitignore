@@ -38,3 +38,8 @@ Thumbs.db
 *.json
 *.csv
 output/
+
+# 临时文件
+pywencai_demo.py
+宽基指数趋势大模型_EMA.py
+push_git.py

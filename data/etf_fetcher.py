@@ -66,7 +66,7 @@ def fetch_uptrend_pool():
     payload = {
         "businessKey": "etfUpTrend",
         "businessPoolKey": "1f3b943f-c5f4-312f-95b9-64de02642115",
-        "custom": {"fieldList": ["subMarket"], "limit": 10000, "offset": 0,  "uniqueTracking": True,}
+        "custom": {"fieldList": ["subMarket"], "limit": 10000, "offset": 0,  "uniqueTracking": False,}
     }
     resp = requests.post(POOL_URL, json=payload, headers=_pool_headers())
     resp.raise_for_status()
@@ -168,8 +168,16 @@ def merge_tags_to_parsed(parsed, tags_dict):
     return parsed
 
 
-def get_etf_uptrend_data():
-    """获取完整的 ETF 上升趋势数据（主入口函数）"""
+def get_etf_uptrend_data(sort_field=None, sort_order='desc'):
+    """
+    获取完整的 ETF 上升趋势数据（主入口函数）
+    
+    Args:
+        sort_field: 排序字段 - 可选值: 'price_change_ratio_pct', 'etf_up_trend_total_ratio', 
+                                      'etf_up_trend_duration', 'etf_up_trend_consecutive_up_days', 
+                                      'etf_limit_up_stock_cnt', 'etf_limit_up_stock_pct'
+        sort_order: 排序顺序 - 'asc' 升序, 'desc' 降序
+    """
     
     # Step1: 池子列表
     pool_items = fetch_uptrend_pool()
@@ -189,8 +197,13 @@ def get_etf_uptrend_data():
     for item in parsed:
         item.pop('full_code', None)
     
-    # 按涨停股占比降序排序
-    parsed = sorted(parsed, key=lambda x: float(x['etf_limit_up_stock_pct'] or 0), reverse=True)
+    # 排序
+    if sort_field:
+        reverse = sort_order == 'desc'
+        parsed = sorted(parsed, key=lambda x: float(x.get(sort_field, 0) or 0), reverse=reverse)
+    else:
+        # 默认按涨停股占比降序排序
+        parsed = sorted(parsed, key=lambda x: float(x['etf_limit_up_stock_pct'] or 0), reverse=True)
     
     return parsed
 

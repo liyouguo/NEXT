@@ -106,7 +106,9 @@ def get_etf_data():
     获取 ETF 上升趋势数据
     """
     try:
-        data = get_etf_uptrend_data()
+        sort_field = request.args.get('sortField')
+        sort_order = request.args.get('sortOrder', 'desc')
+        data = get_etf_uptrend_data(sort_field=sort_field, sort_order=sort_order)
         themes = get_themes()
         return jsonify({
             'success': True,
@@ -126,10 +128,14 @@ def refresh_etf_data():
     刷新 ETF 上升趋势数据
     """
     try:
-        data = get_etf_uptrend_data()
+        data = request.get_json() or {}
+        sort_field = data.get('sortField')
+        sort_order = data.get('sortOrder', 'desc')
+        etf_data = get_etf_uptrend_data(sort_field=sort_field, sort_order=sort_order)
         return jsonify({
             'success': True,
-            'count': len(data)
+            'count': len(etf_data),
+            'data': etf_data
         })
     except Exception as e:
         return jsonify({
