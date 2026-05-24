@@ -5,7 +5,7 @@
 
 from .etf_fetcher import get_etf_uptrend_data, get_themes
 from .nasdaq_fetcher import get_nasdaq_chart_data
-from .fund_fetcher import get_fund_signal_data
+from .fund_fetcher import get_fund_signal_data, get_fund_pool, get_batch_fund_signals
 from .fund_pool_fetcher import get_fund_pool_data, get_preset_queries
 from .broad_index_ema import get_broad_index_data
 
@@ -14,6 +14,8 @@ __all__ = [
     'get_themes', 
     'get_nasdaq_chart_data', 
     'get_fund_signal_data',
+    'get_fund_pool',
+    'get_batch_fund_signals',
     'get_fund_pool_data',
     'get_preset_queries',
     'get_broad_index_data'

@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <!-- 设置页面元信息 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ETF上升趋势 - 美股性价比分析系统</title>
+    
     <style>
+        /* ============ 全局样式 ============ */
         * {
             margin: 0;
             padding: 0;
@@ -19,6 +22,7 @@
             color: #f1f5f9;
         }
 
+        /* ============ 容器样式 ============ */
         .container {
             max-width: 1600px;
             margin: 0 auto;
@@ -39,6 +43,7 @@
             color: #3b82f6;
         }
 
+        /* ============ 页面标题样式 ============ */
         .header {
             text-align: center;
             margin-bottom: 2rem;
@@ -59,6 +64,7 @@
             font-size: 1.1rem;
         }
 
+        /* ============ 状态栏样式 ============ */
         .status-bar {
             display: flex;
             justify-content: center;
@@ -96,6 +102,7 @@
             color: #94a3b8;
         }
 
+        /* ============ 控制按钮样式 ============ */
         .controls {
             display: flex;
             gap: 1rem;
@@ -127,6 +134,7 @@
             cursor: not-allowed;
         }
 
+        /* ============ 主题筛选按钮样式 ============ */
         .filters {
             display: flex;
             gap: 1rem;
@@ -157,6 +165,7 @@
             border-color: #3b82f6;
         }
 
+        /* ============ 摘要卡片样式 ============ */
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -185,6 +194,7 @@
             color: #10b981;
         }
 
+        /* ============ 表格样式 ============ */
         .table-container {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
@@ -224,6 +234,7 @@
             background: rgba(59, 130, 246, 0.1);
         }
 
+        /* 可排序表头样式 */
         th.sortable {
             position: relative;
         }
@@ -231,7 +242,7 @@
         th.sortable::after {
             content: '↕';
             margin-left: 0.5rem;
-            opacity: 0.3;
+ opacity: 0.3;
             font-size: 0.8rem;
         }
 
@@ -256,6 +267,7 @@
             background: rgba(59, 130, 246, 0.1);
         }
 
+        /* ============ 标签样式 ============ */
         .tag {
             display: inline-block;
             padding: 0.25rem 0.5rem;
@@ -280,6 +292,7 @@
             color: #8b5cf6;
         }
 
+        /* 涨跌颜色 */
         .positive {
             color: #10b981;
         }
@@ -293,6 +306,7 @@
             color: #f59e0b;
         }
 
+        /* 空状态样式 */
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
@@ -304,6 +318,7 @@
             margin-bottom: 1rem;
         }
 
+        /* 响应式样式 */
         @media (max-width: 768px) {
             body {
                 padding: 1rem;
@@ -322,29 +337,36 @@
 </head>
 <body>
     <div class="container">
+        <!-- 返回首页链接 -->
         <a href="../index.html" class="nav-back">
             ← 返回首页
         </a>
 
+        <!-- 页面标题 -->
         <div class="header">
             <h1>💎 ETF上升趋势</h1>
             <p>挖掘处于上升趋势的ETF投资机会</p>
         </div>
 
+        <!-- 状态栏 -->
         <div class="status-bar">
             <div class="status-dot" id="statusDot"></div>
             <span class="status-text" id="statusText">正在加载数据...</span>
             <span class="status-text" id="updateTime"></span>
         </div>
 
+        <!-- 控制按钮区 -->
         <div class="controls">
             <button class="btn" id="refreshBtn">🔄 刷新数据</button>
         </div>
 
+        <!-- 主题筛选区 -->
         <div class="filters" id="filtersContainer"></div>
 
+        <!-- 摘要信息卡片 -->
         <div class="summary-grid" id="summaryGrid"></div>
 
+        <!-- ETF数据表格 -->
         <div class="table-container">
             <div class="table-wrapper">
                 <table id="etfTable">
@@ -371,13 +393,21 @@
     </div>
 
     <script>
-        let allData = [];
-        let themes = {};
-        let currentFilter = 'all';
-        let currentSortField = null;
-        let currentSortOrder = 'desc';
+        // ============ 全局变量 ============
+        let allData = [];          // 所有ETF数据
+        let themes = {};           // 主题配置
+        let currentFilter = 'all'; // 当前筛选条件
+        let currentSortField = null; // 当前排序字段
+        let currentSortOrder = 'desc'; // 当前排序顺序
 
+        // ============ 状态更新函数 ============
         function updateStatus(isLoading, isError = false, message = '') {
+            /**
+             * 更新页面状态栏
+             * @param {boolean} isLoading - 是否正在加载
+             * @param {boolean} isError - 是否出错
+             * @param {string} message - 状态信息
+             */
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
             
@@ -394,26 +424,36 @@
         }
 
         function updateUpdateTime() {
+            /** 更新数据更新时间显示 */
             const now = new Date();
             document.getElementById('updateTime').textContent = 
                 `更新时间: ${now.toLocaleString('zh-CN')}`;
         }
 
+        // ============ 数据获取函数 ============
         async function fetchData() {
+            /**
+             * 从API获取ETF数据
+             * 支持通过currentSortField和currentSortOrder传递排序参数
+             */
             updateStatus(true);
             try {
+                // 构建请求URL，包含排序参数
                 let url = '/api/etf/data';
                 if (currentSortField) {
                     url += `?sortField=${currentSortField}&sortOrder=${currentSortOrder}`;
                 }
+                
                 const response = await fetch(url);
                 const result = await response.json();
                 
                 if (result.success) {
+                    // 数据获取成功，更新全局变量
                     allData = result.data;
                     themes = result.themes || {};
                     updateStatus(false);
                     updateUpdateTime();
+                    // 渲染界面
                     renderFilters();
                     renderSummary();
                     renderTable();
@@ -428,6 +468,7 @@
         }
 
         async function refreshData() {
+            /** 刷新数据，重新从服务器获取最新数据 */
             const btn = document.getElementById('refreshBtn');
             btn.disabled = true;
             btn.textContent = '刷新中...';
@@ -465,9 +506,14 @@
             }
         }
 
+        // ============ 排序函数 ============
         async function handleSort(field) {
+            /**
+             * 处理表头点击排序
+             * @param {string} field - 要排序的字段名
+             */
             if (currentSortField === field) {
-                // 切换排序顺序
+                // 如果点击的是当前排序字段，切换排序顺序
                 currentSortOrder = currentSortOrder === 'desc' ? 'asc' : 'desc';
             } else {
                 // 新字段，默认降序
@@ -479,6 +525,7 @@
         }
 
         function updateSortIndicators() {
+            /** 更新排序指示器，显示当前排序状态 */
             document.querySelectorAll('th.sortable').forEach(th => {
                 th.classList.remove('sorted-asc', 'sorted-desc');
                 if (th.dataset.field === currentSortField) {
@@ -487,16 +534,20 @@
             });
         }
 
+        // ============ 渲染函数 ============
         function renderFilters() {
+            /** 渲染主题筛选按钮 */
             const container = document.getElementById('filtersContainer');
             let html = '<button class="filter-btn active" data-filter="all">全部</button>';
             
+            // 为每个主题创建按钮
             for (const [theme, keywords] of Object.entries(themes)) {
                 html += `<button class="filter-btn" data-filter="${theme}">${theme}</button>`;
             }
             
             container.innerHTML = html;
             
+            // 添加按钮点击事件
             container.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -508,6 +559,7 @@
         }
 
         function renderSummary() {
+            /** 渲染摘要信息卡片 */
             const container = document.getElementById('summaryGrid');
             const filteredData = getFilteredData();
             
@@ -532,38 +584,61 @@
         }
 
         function getFilteredData() {
+            /**
+             * 根据当前筛选条件过滤数据
+             * @returns {Array} 过滤后的数据
+             */
             if (currentFilter === 'all') {
                 return allData;
             }
             
+            // 根据主题关键词筛选
             const keywords = themes[currentFilter] || [];
             return allData.filter(item => 
                 keywords.some(kw => item.name && item.name.includes(kw))
             );
         }
 
+        // ============ 统计计算函数 ============
         function calculateAvgRatio(data) {
+            /**
+             * 计算平均趋势涨幅
+             * @param {Array} data - ETF数据数组
+             * @returns {string} 平均涨幅，保留2位小数
+             */
             if (!data.length) return '0.00';
             const sum = data.reduce((acc, item) => acc + (parseFloat(item.etf_up_trend_total_ratio) || 0), 0);
             return (sum / data.length).toFixed(2);
         }
 
         function calculateAvgDuration(data) {
+            /**
+             * 计算平均持续天数
+             * @param {Array} data - ETF数据数组
+             * @returns {number} 平均天数
+             */
             if (!data.length) return '0';
             const sum = data.reduce((acc, item) => acc + (parseInt(item.etf_up_trend_duration) || 0), 0);
             return Math.round(sum / data.length);
         }
 
         function calculateAvgLimitUp(data) {
+            /**
+             * 计算涨停股占比均值
+             * @param {Array} data - ETF数据数组
+             * @returns {string} 平均占比，保留2位小数
+             */
             if (!data.length) return '0.00';
             const sum = data.reduce((acc, item) => acc + (parseFloat(item.etf_limit_up_stock_pct) || 0), 0);
             return (sum / data.length).toFixed(2);
         }
 
         function renderTable() {
+            /** 渲染ETF数据表格 */
             const tbody = document.getElementById('etfTableBody');
             const filteredData = getFilteredData();
             
+            // 空状态
             if (!filteredData.length) {
                 tbody.innerHTML = `
                     <tr>
@@ -578,6 +653,7 @@
                 return;
             }
             
+            // 渲染表格行
             tbody.innerHTML = filteredData.map((item, index) => {
                 const rank = index + 1;
                 const priceChange = item.price_change_ratio_pct;
@@ -611,19 +687,22 @@
             }).join('');
         }
 
+        // ============ 事件绑定 ============
+        // 刷新按钮点击事件
         document.getElementById('refreshBtn').addEventListener('click', refreshData);
         
-        // 为可排序的表头添加点击事件
+        // 可排序表头点击事件
         document.querySelectorAll('th.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 handleSort(th.dataset.field);
             });
         });
 
-        // 初始化加载数据
+        // ============ 初始化 ============
+        // 页面加载时获取数据
         fetchData();
         
-        // 每5分钟自动刷新
+        // 每5分钟自动刷新数据
         setInterval(fetchData, 5 * 60 * 1000);
     </script>
 </body>

@@ -331,7 +331,6 @@ def get_fund_pool_presets():
             'error': str(e)
         }), 500
 
-
 @app.route('/api/fund_pool/data', methods=['GET', 'POST'])
 def get_fund_pool_data_api():
     """
